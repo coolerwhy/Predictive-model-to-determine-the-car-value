@@ -1,0 +1,249 @@
+#load data
+data=read.csv("~/Documents/PSU/Regression Models/Group Project/kbdata.csv")
+
+attach(data)
+head(data)
+#dividing 75% of data as testing and 25% as testing
+smp_siz = floor(0.75*nrow(data))  
+# Randomly identifies the rows equal to sample size 
+set.seed(123) 
+#Randomly identifies the rows equal to sample size 
+train_ind = sample(seq_len(nrow(data)),size = smp_siz)
+#creates the training dataset with row numbers stored in train_ind
+train = data[train_ind,]
+# creates the test dataset excluding the row numbers mentioned in train_ind
+test = data[-train_ind,] 
+detach(data)
+attach(train)
+##################################################################
+#Train
+#Simple Linear Regression model
+modelSLR=lm(Price~Mileage,data=train)
+summary(modelSLR)
+plot(x=Mileage,y=Price,pch=16)
+abline(modelSLR,col="red")
+#Residuals vs Fitted Value plot
+library(MASS)
+# Residuals vs Fitted value plot
+stud.residuals_1=studres(modelSLR)
+fitted.values_1=fitted.values(modelSLR)
+plot(x=fitted.values_1,y=stud.residuals_1,xlab="Fitted Vaules",ylab="Studentized Residuals",pch=16)
+abline(h=0,col="red",lty=2)
+abline(h=-3,col="blue",lty=3)
+abline(h=3,col="blue",lty=3)
+#it failed by looking at the Residual vs Fitted value plot
+
+#Variable Selection
+#Multiple Linear Regression Model
+#First come with the numerical data
+#Mileage, Cylinder, Liter, Door,Cruise, Sound, and leather
+#convert Doors and Cylinder into factor then using contrasts to dummy coding
+Door_1=as.factor(Doors)
+contrasts(Door_1)
+Cylinder_1=as.factor(Cylinder)
+contrasts(Cylinder_1)
+
+#R^2 --0.5635
+modelSLR_0=lm(Price~Mileage+Liter+Cylinder_1+Door_1+Cruise+Sound+Leather,data=train)
+summary(modelSLR_0)
+# Residuals vs Fitted value plot
+stud.residuals_2=studres(modelSLR_0)
+fitted.values_2=fitted.values(modelSLR_0)
+plot(x=fitted.values_2,y=stud.residuals_2,xlab="Fitted Vaules",ylab="Studentized Residuals",pch=16)
+abline(h=0,col="red",lty=2)
+abline(h=-3,col="blue",lty=3)
+abline(h=3,col="blue",lty=3)
+#it failed by looking at the Residual vs Fitted value plot
+
+#test for multicollinearity 
+#it shows that multicollinearity is a serious problem in Liter and Cylinder
+library(car)
+vif(modelSLR_0)
+#also correlation plot shows there is strong relationship between Liter and Cylinder
+t<-data.frame(train[,7:8])
+corMatrix=cor(t,method="pearson")
+library(corrplot)
+corrplot(corMatrix,method="number")
+
+
+#Take Make into model first, since the points on the top area are moslty from the Make
+#convert Make into factor then using contrasts to dummy coding
+Make_1=as.factor(Make)
+contrasts(Make_1)
+
+#Add Make -- R^2=0.8831
+modelSLR_2=lm(Price~Mileage+Liter+Cylinder_1+Door_1+Cruise+Sound+Leather+Make_1,data=train)
+summary(modelSLR_2)
+# Residuals vs Fitted value plot
+stud.residuals_3=studres(modelSLR_2)
+fitted.values_3=fitted.values(modelSLR_2)
+plot(x=fitted.values_3,y=stud.residuals_3,xlab="Fitted Vaules",ylab="Studentized Residuals",pch=16)
+abline(h=0,col="red",lty=2)
+abline(h=-3,col="blue",lty=3)
+abline(h=3,col="blue",lty=3)
+#it failed by looking at the Residual vs Fitted value plot
+
+
+#then we add Type R^2--0.9375
+#convert Type into factor then using contrasts to dummy coding
+type_1=as.factor(Type)
+contrasts(type_1)
+modelSLR_3=lm(Price~Mileage+Liter+Cylinder_1+Door_1+Cruise+Sound+Leather+Make_1+type_1,data=train)
+summary(modelSLR_3)
+# Residuals vs Fitted value plot
+stud.residuals_4=studres(modelSLR_3)
+fitted.values_4=fitted.values(modelSLR_3)
+plot(x=fitted.values_4,y=stud.residuals_4,xlab="Fitted Vaules",ylab="Studentized Residuals",pch=16)
+abline(h=0,col="red",lty=2)
+abline(h=-3,col="blue",lty=3)
+abline(h=3,col="blue",lty=3)
+#it failed by looking at the Residual vs Fitted value plot
+
+
+#Variable selection
+library(leaps)
+Bestfits=regsubsets(Price~Mileage+Liter+Cylinder_1+Door_1+Cruise+Sound+Leather+Make_1+type_1,data=train,nbest=1)
+summary(Bestfits)
+plot(Bestfits,scale="adjr2")
+plot(Bestfits,scale="bic")
+plot(Bestfits,scale="Cp")
+#drop out Cruise, Sound and Leather of the model
+# we pick one  of Cylinder and Liter due to multicolliearity
+# Cylinder and Liter both are the measurements of engine
+#plus there is a strong association between Cylinder and Liter
+#Liter
+Bestfits_1=regsubsets(Price~Mileage+Liter+Door_1+Make_1+type_1,data=train,nbest=1)
+summary(Bestfits_1)
+plot(Bestfits_1,scale="adjr2")
+modelSLR_4=lm(Price~Mileage+Liter+Make_1+Door_1+type_1,data=train)
+summary(modelSLR_4)
+# Residuals vs Fitted value plot
+stud.residuals_5=studres(modelSLR_4)
+fitted.values_5=fitted.values(modelSLR_4)
+plot(x=fitted.values_5,y=stud.residuals_5,xlab="Fitted Vaules",ylab="Studentized Residuals",pch=16)
+abline(h=0,col="red",lty=2)
+abline(h=-3,col="blue",lty=3)
+abline(h=3,col="blue",lty=3)
+#Cylinder
+Bestfits_2=regsubsets(Price~Mileage+Cylinder_1+Make_1+Door_1+type_1,data=train,nbest=1)
+summary(Bestfits_2)
+plot(Bestfits_2,scale="adjr2")
+modelSLR_5=lm(Price~Mileage+Cylinder_1+Make_1+Door_1+type_1,data=train)
+summary(modelSLR_5)
+#choosing Liter due to higher R^2_adj
+
+#adding log transformation on response variable, showing that R^2 is improved--0.9511
+modelSLR_6=lm(log(Price)~Mileage+Liter+Make_1+Door_1+type_1,data=train)
+summary(modelSLR_6)
+
+#since there are so many levels in Trim and Model, we don't include them in the model
+#Dropping Door from the model
+#Check for the final model assumptions
+fullModel=lm(log(Price)~Mileage+Liter+Make_1+type_1,data=train)
+summary(fullModel)
+#R^2--0.9511
+library(MASS)
+stud.residuals=studres(fullModel)
+fitted.values=fitted.values(fullModel)
+
+# Residuals vs Fitted value plot
+plot(x=fitted.values,y=stud.residuals,xlab="Fitted Vaules",ylab="Studentized Residuals",pch=16)
+abline(h=0,col="red",lty=2)
+abline(h=-3,col="blue",lty=3)
+abline(h=3,col="blue",lty=3)
+
+## R vs each predictor
+plot(Mileage,y=stud.residuals,xlab="Mileage",ylab="Studentized Residuals",pch=20)
+abline(h=0,col="red",lty=2)
+abline(h=-3,col="blue",lty=3)
+abline(h=3,col="blue",lty=3)
+plot(Liter,y=stud.residuals,xlab="Liter",ylab="Studentized Residuals",pch=20)
+abline(h=0,col="red",lty=2)
+abline(h=-3,col="blue",lty=3)
+abline(h=3,col="blue",lty=3)
+plot(Make_1,y=stud.residuals,xlab="Make",ylab="Studentized Residuals",pch=20)
+abline(h=0,col="red",lty=2)
+abline(h=-3,col="blue",lty=3)
+abline(h=3,col="blue",lty=3)
+plot(type_1,y=stud.residuals,xlab="Type",ylab="Studentized Residuals",pch=20)
+abline(h=0,col="red",lty=2)
+abline(h=-3,col="blue",lty=3)
+abline(h=3,col="blue",lty=3)
+
+# Normal QQ plot
+qqnorm(stud.residuals)
+qqline(stud.residuals,col=2)
+library(nortest)
+ad.test(stud.residuals)
+
+
+#BP test
+library(lmtest)
+bptest(fullModel)
+#it failed the BP test, but from Residuals vs Fitted value plot, points are randomly 
+#distributed around 0, so there is no big problem
+
+# fitted and observed values
+plot(fitted.values,y=log(train$Price),xlab="Fitted Values",ylab="Observed Response")
+
+#leverage
+plot(hatvalues(fullModel),type="h",ylab="leverage")
+n=nrow(train)
+p=length(coefficients(fullModel))
+cutLev=2*p/n
+abline(h=cutLev,col="red")
+
+#cook's distance
+plot(cooks.distance(fullModel),ylab="Cook's distance",type="h")
+abline(h=1,col="red")
+#it has some high leverage points, but none of them are influential
+
+#########################################################################
+#Test Model
+detach(train) 
+attach(test)
+
+# turn categories variables to factor variables
+Cylinder_2=as.factor(Cylinder)
+contrasts(Cylinder_2)
+Make_2=as.factor(Make)
+contrasts(Make_2)
+type_2=as.factor(Type)
+contrasts(type_2)
+
+
+#add coloum lnPrice
+test$lnPrice<-log(Price)
+# model fit
+testModel=lm(log(Price)~Mileage+Liter+Make_2+type_2,data=test)
+summary(testModel)
+# #R^2--0.9584
+AIC(testModel)
+BIC(testModel)
+
+
+#predict the distance on test data
+pricePred <- predict(testModel, data=test)
+# make actuals_predicteds dataframe.
+actuals_preds <- data.frame(cbind(actuals=test$lnPrice, predicteds=pricePred))
+correlation_accuracy <- cor(actuals_preds)
+cor(actuals_preds)
+View(actuals_preds)
+head(actuals_preds)
+
+min_max_accuracy <- mean(apply(actuals_preds, 1, min) / apply(actuals_preds, 1, max))  
+View(min_max_accuracy)
+mape <- mean(abs((actuals_preds$predicteds - actuals_preds$actuals))/actuals_preds$actuals)  
+View(mape)
+
+#calculate MSE and RMSE
+library(Metrics)
+MSE=mse(test$lnPrice, pricePred)
+RSME=sqrt(MSE)
+RSME
+
+
+
+
+
+
